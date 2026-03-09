@@ -1,6 +1,30 @@
+import os
+
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
+os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+
+from database import Base, SessionLocal, engine, get_db
 from main import app
+
+
+def override_get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(autouse=True)
+def reset_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    yield
 
 
 @pytest.mark.asyncio
@@ -23,6 +47,29 @@ async def test_create_and_get_book():
 
         get_response = await ac.get(f"/books/{book_id}")
         assert get_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_books_limit_offset_pagination():
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        for idx in range(3):
+            await ac.post("/books/", json={
+                "title": f"Book {idx}",
+                "author": "Author",
+                "description": "Desc",
+                "year": 2020 + idx,
+                "status": "available",
+            })
+
+        response = await ac.get("/books/?limit=2&offset=1&sort_by=title")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["title"] == "Book 1"
+        assert data[1]["title"] == "Book 2"
 
 
 @pytest.mark.asyncio

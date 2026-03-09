@@ -1,44 +1,36 @@
-from uuid import uuid4, UUID
-from typing import List, Optional
+from typing import Optional
+from uuid import UUID
+
 from repository.book_repository import BookRepository
 from schemas.book import BookCreate
 
 
 class BookService:
 
-    def __init__(self):
-        self.repository = BookRepository()
+    def __init__(self, repository: BookRepository):
+        self.repository = repository
 
-    async def get_books(
+    def get_books(
         self,
         status: Optional[str] = None,
         author: Optional[str] = None,
         sort_by: Optional[str] = None,
-    ) -> List[dict]:
+        limit: int = 10,
+        offset: int = 0,
+    ):
+        return self.repository.get_all(
+            status=status,
+            author=author,
+            sort_by=sort_by,
+            limit=limit,
+            offset=offset,
+        )
 
-        books = await self.repository.get_all()
+    def get_book(self, book_id: UUID):
+        return self.repository.get_by_id(book_id)
 
-        if status:
-            books = [b for b in books if b["status"] == status]
+    def create_book(self, book: BookCreate):
+        return self.repository.add(book)
 
-        if author:
-            books = [b for b in books if b["author"].lower() == author.lower()]
-
-        if sort_by == "title":
-            books = sorted(books, key=lambda x: x["title"])
-        elif sort_by == "year":
-            books = sorted(books, key=lambda x: x["year"])
-
-        return books
-
-    async def get_book(self, book_id: UUID):
-        return await self.repository.get_by_id(book_id)
-
-    async def create_book(self, book: BookCreate):
-        book_dict = book.dict()
-        book_dict["id"] = uuid4()
-        await self.repository.add(book_dict)
-        return book_dict
-
-    async def delete_book(self, book_id: UUID):
-        await self.repository.delete(book_id)
+    def delete_book(self, book_id: UUID):
+        self.repository.delete(book_id)
