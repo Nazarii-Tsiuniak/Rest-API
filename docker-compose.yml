@@ -1,32 +1,27 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: library-db
+  mongo:
+    image: mongo:7
+    container_name: library-mongo
     environment:
-      POSTGRES_DB: library
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      MONGO_INITDB_ROOT_USERNAME: mongo_admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: library
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d library"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      - mongo_data:/data/db
 
   api:
     build: .
     container_name: library-api
     depends_on:
-      db:
-        condition: service_healthy
+      - mongo
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/library
-      SEED_DATA: "1"
+      MONGO_URL: mongodb://mongo_admin:password@mongo:27017
+      MONGO_DB: library
+      MONGO_COLLECTION: books
     ports:
       - "8000:8000"
 
 volumes:
-  postgres_data:
+  mongo_data:

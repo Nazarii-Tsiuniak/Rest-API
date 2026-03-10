@@ -1,6 +1,4 @@
 from typing import Optional
-from uuid import UUID
-
 from repository.book_repository import BookRepository
 from schemas.book import BookCreate
 
@@ -10,7 +8,7 @@ class BookService:
     def __init__(self, repository: BookRepository):
         self.repository = repository
 
-    def get_books(
+    async def get_books(
         self,
         status: Optional[str] = None,
         author: Optional[str] = None,
@@ -18,7 +16,7 @@ class BookService:
         limit: int = 10,
         offset: int = 0,
     ):
-        return self.repository.get_all(
+        return await self.repository.get_all(
             status=status,
             author=author,
             sort_by=sort_by,
@@ -26,11 +24,11 @@ class BookService:
             offset=offset,
         )
 
-    def get_book(self, book_id: UUID):
-        return self.repository.get_by_id(book_id)
+    async def get_book(self, book_id: str):
+        return await self.repository.get_by_id(book_id)
 
-    def create_book(self, book: BookCreate):
-        return self.repository.add(book)
+    async def create_book(self, book: BookCreate):
+        return await self.repository.add(book)
 
-    def delete_book(self, book_id: UUID):
-        self.repository.delete(book_id)
+    async def delete_book(self, book_id: str):
+        return await self.repository.delete(book_id)

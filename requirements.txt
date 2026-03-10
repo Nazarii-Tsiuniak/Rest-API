@@ -3,5 +3,5 @@ uvicorn
 pydantic
 pytest
 httpx
-sqlalchemy
-psycopg2-binary
+motor
+pydantic-mongo

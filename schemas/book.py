@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from uuid import UUID
+from pydantic_mongo import PydanticObjectId
 from enum import Enum
 
 
@@ -23,4 +23,4 @@ class BookCreate(BookBase):
 class BookResponse(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID
+    id: PydanticObjectId
