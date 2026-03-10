@@ -16,14 +16,14 @@ class BookService:
         author: Optional[str] = None,
         sort_by: Optional[str] = None,
         limit: int = 10,
-        offset: int = 0,
+        cursor: Optional[str] = None,
     ):
-        return self.repository.get_all(
+        return self.repository.get_all_cursor(
             status=status,
             author=author,
             sort_by=sort_by,
             limit=limit,
-            offset=offset,
+            cursor=cursor,
         )
 
     def get_book(self, book_id: UUID):

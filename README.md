@@ -14,17 +14,17 @@ docker compose up --build
 
 API буде доступне на `http://localhost:8000`.
 
-### Пагінація (limit-offset)
+### Пагінація (cursor)
 Ендпоінт `GET /books/` підтримує параметри:
 - `limit` (default: `10`, min: `1`, max: `100`)
-- `offset` (default: `0`, min: `0`)
+- `cursor` (рядок з відповіді `next_cursor`)
 - `status`
 - `author`
 - `sort_by` (`title` або `year`)
 
 Приклад:
 ```http
-GET /books/?limit=5&offset=10&sort_by=title
+GET /books/?limit=5&sort_by=title
 ```
 
 ### Локальний запуск тестів

@@ -24,3 +24,8 @@ class BookResponse(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+
+
+class BookListResponse(BaseModel):
+    items: list[BookResponse]
+    next_cursor: str | None = None

@@ -50,7 +50,7 @@ async def test_create_and_get_book():
 
 
 @pytest.mark.asyncio
-async def test_books_limit_offset_pagination():
+async def test_books_cursor_pagination():
     transport = ASGITransport(app=app)
 
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -63,13 +63,20 @@ async def test_books_limit_offset_pagination():
                 "status": "available",
             })
 
-        response = await ac.get("/books/?limit=2&offset=1&sort_by=title")
+        response = await ac.get("/books/?limit=2&sort_by=title")
         assert response.status_code == 200
 
         data = response.json()
-        assert len(data) == 2
-        assert data[0]["title"] == "Book 1"
-        assert data[1]["title"] == "Book 2"
+        assert len(data["items"]) == 2
+        assert data["items"][0]["title"] == "Book 0"
+        assert data["items"][1]["title"] == "Book 1"
+        assert data["next_cursor"]
+
+        response = await ac.get(f"/books/?limit=2&sort_by=title&cursor={data['next_cursor']}")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 1
+        assert data["items"][0]["title"] == "Book 2"
 
 
 @pytest.mark.asyncio
