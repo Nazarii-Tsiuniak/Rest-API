@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["SEED_DATA"] = "0"
 
 from database import Base, SessionLocal, engine, get_db
 from main import app
