@@ -1,22 +1,21 @@
 from typing import Optional
 
-from motor.motor_asyncio import AsyncIOMotorCollection
-from pydantic_mongo import PydanticObjectId
+from bson import ObjectId
+from pymongo.collection import Collection
 
 from schemas.book import BookCreate
 
 
 class BookRepository:
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: Collection):
         self.collection = collection
-        self._id_field = "_id"
 
     def _normalize(self, doc: dict) -> dict:
-        if self._id_field in doc:
-            doc["id"] = doc.pop(self._id_field)
+        if "_id" in doc:
+            doc["id"] = str(doc.pop("_id"))
         return doc
 
-    async def get_all(
+    def get_all(
         self,
         status: Optional[str] = None,
         author: Optional[str] = None,
@@ -40,24 +39,19 @@ class BookRepository:
             cursor = cursor.sort("year", 1)
 
         cursor = cursor.skip(offset).limit(limit)
-        docs = await cursor.to_list(length=limit)
-        return [self._normalize(d) for d in docs]
+        return [self._normalize(d) for d in list(cursor)]
 
-    async def get_by_id(self, book_id: str) -> Optional[dict]:
-        doc = await self.collection.find_one(
-            {"_id": PydanticObjectId(book_id)}
-        )
+    def get_by_id(self, book_id: str) -> Optional[dict]:
+        doc = self.collection.find_one({"_id": ObjectId(book_id)})
         if doc is None:
             return None
         return self._normalize(doc)
 
-    async def add(self, book: BookCreate) -> dict:
+    def add(self, book: BookCreate) -> dict:
         payload = book.model_dump()
-        result = await self.collection.insert_one(payload)
-        return {**payload, "id": result.inserted_id}
+        result = self.collection.insert_one(payload)
+        return {**payload, "id": str(result.inserted_id)}
 
-    async def delete(self, book_id: str) -> bool:
-        response = await self.collection.delete_one(
-            {"_id": PydanticObjectId(book_id)}
-        )
+    def delete(self, book_id: str) -> bool:
+        response = self.collection.delete_one({"_id": ObjectId(book_id)})
         return response.deleted_count > 0

@@ -1,7 +1,7 @@
-fastapi
-uvicorn
 pydantic
 pytest
 httpx
-motor
-pydantic-mongo
+flask
+flask-restful
+flasgger
+pymongo

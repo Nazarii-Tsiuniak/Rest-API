@@ -1,8 +1,8 @@
 import os
 
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 
-_client: AsyncIOMotorClient | None = None
+_client: MongoClient | None = None
 
 
 def _mongo_url() -> str:
@@ -23,7 +23,7 @@ def _mongo_collection() -> str:
 def connect() -> None:
     global _client
     if _client is None:
-        _client = AsyncIOMotorClient(_mongo_url())
+        _client = MongoClient(_mongo_url())
 
 
 def get_books_collection():
