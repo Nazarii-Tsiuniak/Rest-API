@@ -50,7 +50,7 @@ class BookRepository:
     def add(self, book: BookCreate) -> dict:
         payload = book.model_dump()
         result = self.collection.insert_one(payload)
-        return {**payload, "id": str(result.inserted_id)}
+        return self._normalize({**payload, "_id": result.inserted_id})
 
     def delete(self, book_id: str) -> bool:
         response = self.collection.delete_one({"_id": ObjectId(book_id)})
