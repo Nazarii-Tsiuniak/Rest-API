@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from api.books import router
+from api.auth import router as auth_router
+from api.books import router as books_router
 from database import Base, SessionLocal, engine
 from seed_data import seed_books_if_empty
 
@@ -17,4 +18,5 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Library API", lifespan=lifespan)
 
-app.include_router(router)
+app.include_router(auth_router)
+app.include_router(books_router)

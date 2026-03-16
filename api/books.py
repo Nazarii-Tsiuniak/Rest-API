@@ -7,9 +7,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from repository.book_repository import BookRepository
 from schemas.book import BookCreate, BookListResponse, BookResponse
+from services.auth_service import get_current_user
 from services.book_service import BookService
 
-router = APIRouter(prefix="/books", tags=["Books"])
+router = APIRouter(
+    prefix="/books",
+    tags=["Books"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def get_book_service(db: Session = Depends(get_db)) -> BookService:
