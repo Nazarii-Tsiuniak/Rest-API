@@ -28,7 +28,10 @@ async def get_books(
 
 @router.get("/{book_id}", response_model=BookResponse, status_code=200)
 async def get_book(book_id: str, service: BookService = Depends(get_book_service)):
-    book = await service.get_book(book_id)
+    try:
+        book = await service.get_book(book_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid book id") from exc
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
@@ -44,5 +47,8 @@ async def create_book(
 
 @router.delete("/{book_id}", status_code=204)
 async def delete_book(book_id: str, service: BookService = Depends(get_book_service)):
-    await service.delete_book(book_id)
+    try:
+        await service.delete_book(book_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid book id") from exc
     return

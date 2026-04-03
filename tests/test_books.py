@@ -1,5 +1,5 @@
 import pytest
-from httpx import ASGITransport, AsyncClient
+from fastapi.testclient import TestClient
 
 from api.books import get_book_service
 from main import app
@@ -10,6 +10,11 @@ class FakeBookRepository:
     def __init__(self):
         self._books: list[dict] = []
         self._counter = 0
+
+    def _validate_object_id(self, book_id: str) -> None:
+        if len(book_id) != 24:
+            raise ValueError("Invalid book id")
+        int(book_id, 16)
 
     async def get_all(
         self,
@@ -31,6 +36,7 @@ class FakeBookRepository:
         return books[offset: offset + limit]
 
     async def get_by_id(self, book_id: str):
+        self._validate_object_id(book_id)
         for book in self._books:
             if str(book["id"]) == book_id:
                 return book
@@ -44,6 +50,7 @@ class FakeBookRepository:
         return book_dict
 
     async def delete(self, book_id: str):
+        self._validate_object_id(book_id)
         before = len(self._books)
         self._books = [b for b in self._books if str(b["id"]) != book_id]
         return len(self._books) < before
@@ -62,57 +69,83 @@ app.dependency_overrides[get_book_service] = override_get_service
 @pytest.fixture(autouse=True)
 def reset_repo():
     fake_repo._books = []
+    fake_repo._counter = 0
     yield
 
 
-@pytest.mark.asyncio
-async def test_create_and_get_book():
-    transport = ASGITransport(app=app)
-
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        response = await ac.post("/books/", json={
-            "title": "Test Book",
-            "author": "Author",
-            "description": "Desc",
-            "year": 2024,
-            "status": "available"
-        })
-
-        assert response.status_code == 201
-        data = response.json()
-        book_id = data["id"]
-
-        get_response = await ac.get(f"/books/{book_id}")
-        assert get_response.status_code == 200
+@pytest.fixture()
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-@pytest.mark.asyncio
-async def test_books_limit_offset_pagination():
-    transport = ASGITransport(app=app)
-
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        for idx in range(3):
-            await ac.post("/books/", json={
-                "title": f"Book {idx}",
-                "author": "Author",
-                "description": "Desc",
-                "year": 2020 + idx,
-                "status": "available",
-            })
-
-        response = await ac.get("/books/?limit=2&offset=1&sort_by=title")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert len(data) == 2
-        assert data[0]["title"] == "Book 1"
-        assert data[1]["title"] == "Book 2"
+def create_book(client: TestClient, **overrides) -> dict:
+    payload = {
+        "title": "Test Book",
+        "author": "Author",
+        "description": "Desc",
+        "year": 2024,
+        "status": "available",
+    }
+    payload.update(overrides)
+    response = client.post("/books/", json=payload)
+    assert response.status_code == 201
+    return response.json()
 
 
-@pytest.mark.asyncio
-async def test_delete_book_idempotent():
-    transport = ASGITransport(app=app)
+def test_create_and_get_book(client: TestClient):
+    data = create_book(client)
+    book_id = data["id"]
 
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        response = await ac.delete("/books/00000000-0000-0000-0000-000000000000")
-        assert response.status_code == 204
+    get_response = client.get(f"/books/{book_id}")
+    assert get_response.status_code == 200
+
+
+def test_books_limit_offset_pagination(client: TestClient):
+    for idx in range(3):
+        create_book(client, title=f"Book {idx}", year=2020 + idx)
+
+    response = client.get("/books/?limit=2&offset=1&sort_by=title")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["title"] == "Book 1"
+    assert data[1]["title"] == "Book 2"
+
+
+def test_get_book_not_found_returns_404(client: TestClient):
+    response = client.get("/books/000000000000000000000000")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Book not found"
+
+
+def test_get_book_invalid_id_returns_400(client: TestClient):
+    response = client.get("/books/not-an-object-id")
+    assert response.status_code == 400
+
+
+def test_delete_book_invalid_id_returns_400(client: TestClient):
+    response = client.delete("/books/not-an-object-id")
+    assert response.status_code == 400
+
+
+def test_delete_book_idempotent(client: TestClient):
+    response = client.delete("/books/000000000000000000000000")
+    assert response.status_code == 204
+
+
+def test_create_book_missing_required_field_returns_422(client: TestClient):
+    response = client.post("/books/", json={
+        "title": "Missing status",
+        "author": "Author",
+        "description": "Desc",
+        "year": 2024,
+    })
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1"])
+def test_get_books_invalid_pagination_returns_422(client: TestClient, query: str):
+    response = client.get(f"/books/?{query}")
+    assert response.status_code == 422
