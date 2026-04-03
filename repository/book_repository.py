@@ -11,14 +11,11 @@ class BookRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_all(
+    def _base_query(
         self,
         status: Optional[str] = None,
         author: Optional[str] = None,
-        sort_by: Optional[str] = None,
-        limit: int = 10,
-        offset: int = 0,
-    ) -> list[Book]:
+    ):
         query = self.db.query(Book)
 
         if status:
@@ -27,12 +24,31 @@ class BookRepository:
         if author:
             query = query.filter(Book.author.ilike(author))
 
+        return query
+
+    def get_all(
+        self,
+        status: Optional[str] = None,
+        author: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[Book]:
+        query = self._base_query(status=status, author=author)
+
         if sort_by == "title":
             query = query.order_by(Book.title)
         elif sort_by == "year":
             query = query.order_by(Book.year)
 
         return query.offset(offset).limit(limit).all()
+
+    def get_count(
+        self,
+        status: Optional[str] = None,
+        author: Optional[str] = None,
+    ) -> int:
+        return self._base_query(status=status, author=author).count()
 
     def get_by_id(self, book_id: UUID) -> Optional[Book]:
         return self.db.query(Book).filter(Book.id == str(book_id)).first()

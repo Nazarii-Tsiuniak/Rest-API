@@ -1,12 +1,12 @@
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
 from repository.book_repository import BookRepository
-from schemas.book import BookCreate, BookResponse
+from schemas.book import BookCreate, BookResponse, PaginationResponse
 from services.book_service import BookService
 
 router = APIRouter(prefix="/books", tags=["Books"])
@@ -16,8 +16,9 @@ def get_book_service(db: Session = Depends(get_db)) -> BookService:
     return BookService(BookRepository(db))
 
 
-@router.get("/", response_model=List[BookResponse], status_code=200)
+@router.get("/", response_model=PaginationResponse, status_code=200)
 def get_books(
+    request: Request,
     status: Optional[str] = Query(None),
     author: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None),
@@ -25,7 +26,14 @@ def get_books(
     offset: int = Query(0, ge=0),
     service: BookService = Depends(get_book_service),
 ):
-    return service.get_books(status, author, sort_by, limit, offset)
+    return service.get_all_books_by_offset(
+        status=status,
+        author=author,
+        sort_by=sort_by,
+        limit=limit,
+        offset=offset,
+        request_url=str(request.url),
+    )
 
 
 @router.get("/{book_id}", response_model=BookResponse, status_code=200)

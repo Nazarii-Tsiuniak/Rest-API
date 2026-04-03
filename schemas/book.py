@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BookStatus(str, Enum):
@@ -24,3 +25,11 @@ class BookResponse(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+
+
+class PaginationResponse(BaseModel):
+    count: int
+    offset: int
+    limit: int
+    next: str | None
+    results: list[BookResponse]
