@@ -21,3 +21,11 @@ class BookCreate(BookBase):
 
 class BookResponse(BookBase):
     id: str
+
+
+class PaginationResponse(BaseModel):
+    count: int
+    offset: int
+    limit: int
+    next: str | None
+    results: list[BookResponse]

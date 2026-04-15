@@ -25,6 +25,14 @@ class FakeBookRepository:
             books = sorted(books, key=lambda x: x["year"])
         return books[offset: offset + limit]
 
+    def get_count(self, status=None, author=None):
+        books = self._books[:]
+        if status:
+            books = [b for b in books if b["status"] == status]
+        if author:
+            books = [b for b in books if b["author"].lower() == author.lower()]
+        return len(books)
+
     def get_by_id(self, book_id: str):
         self._validate_object_id(book_id)
         for book in self._books:
@@ -84,9 +92,28 @@ def test_books_limit_offset_pagination(client):
     assert response.status_code == 200
 
     data = response.get_json()
-    assert len(data) == 2
-    assert data[0]["title"] == "Book 1"
-    assert data[1]["title"] == "Book 2"
+    assert data["count"] == 3
+    assert data["offset"] == 1
+    assert data["limit"] == 2
+    assert data["next"] is None
+    assert len(data["results"]) == 2
+    assert data["results"][0]["title"] == "Book 1"
+    assert data["results"][1]["title"] == "Book 2"
+
+
+def test_books_pagination_next_link(client):
+    for idx in range(4):
+        create_book(client, title=f"Book {idx}", year=2020 + idx)
+
+    response = client.get("/books/?limit=2&offset=0")
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data["count"] == 4
+    assert data["offset"] == 0
+    assert data["limit"] == 2
+    assert data["next"] == "http://localhost/books/?limit=2&offset=2"
+    assert len(data["results"]) == 2
 
 
 def test_delete_book_idempotent(client):

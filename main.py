@@ -39,7 +39,14 @@ def create_app(repo: BookRepository | None = None) -> Flask:
                 offset = int(request.args.get("offset", 0))
             except ValueError:
                 return {"detail": "Invalid limit/offset"}, 400
-            books = service.get_books(status, author, sort_by, limit, offset)
+            books = service.get_all_books_by_offset(
+                status=status,
+                author=author,
+                sort_by=sort_by,
+                limit=limit,
+                offset=offset,
+                request_url=request.url,
+            )
             return books, 200
 
         @swag_from({

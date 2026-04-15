@@ -15,6 +15,21 @@ class BookRepository:
             doc["id"] = str(doc.pop("_id"))
         return doc
 
+    def _build_query(
+        self,
+        status: Optional[str] = None,
+        author: Optional[str] = None,
+    ) -> dict:
+        query: dict = {}
+
+        if status:
+            query["status"] = status
+
+        if author:
+            query["author"] = {"$regex": f"^{author}$", "$options": "i"}
+
+        return query
+
     def get_all(
         self,
         status: Optional[str] = None,
@@ -23,13 +38,7 @@ class BookRepository:
         limit: int = 10,
         offset: int = 0,
     ) -> list[dict]:
-        query: dict = {}
-
-        if status:
-            query["status"] = status
-
-        if author:
-            query["author"] = {"$regex": f"^{author}$", "$options": "i"}
+        query = self._build_query(status=status, author=author)
 
         cursor = self.collection.find(query)
 
@@ -40,6 +49,14 @@ class BookRepository:
 
         cursor = cursor.skip(offset).limit(limit)
         return [self._normalize(d) for d in list(cursor)]
+
+    def get_count(
+        self,
+        status: Optional[str] = None,
+        author: Optional[str] = None,
+    ) -> int:
+        query = self._build_query(status=status, author=author)
+        return self.collection.count_documents(query)
 
     def get_by_id(self, book_id: str) -> Optional[dict]:
         doc = self.collection.find_one({"_id": ObjectId(book_id)})
