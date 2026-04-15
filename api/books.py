@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from repository.book_repository import BookRepository
 from schemas.book import BookCreate, BookListResponse, BookResponse
-from services.auth_service import get_current_user
 from services.book_service import BookService
+from services.rate_limiter import rate_limit_authenticated
 
 router = APIRouter(
     prefix="/books",
     tags=["Books"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(rate_limit_authenticated)],
 )
 
 

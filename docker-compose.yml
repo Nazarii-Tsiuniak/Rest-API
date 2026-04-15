@@ -22,11 +22,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/library
+      REDIS_URL: redis://redis:6379/0
       SEED_DATA: "1"
     ports:
       - "8000:8000"
+
+  redis:
+    image: redis:7-alpine
+    container_name: library-redis
+    ports:
+      - "6379:6379"
 
 volumes:
   postgres_data:
