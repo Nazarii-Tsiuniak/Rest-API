@@ -1,0 +1,9 @@
+services:
+  prism:
+    image: stoplight/prism:5
+    container_name: library-prism
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./openapi/library-api.yaml:/tmp/library-api.yaml:ro
+    command: mock -h 0.0.0.0 /tmp/library-api.yaml

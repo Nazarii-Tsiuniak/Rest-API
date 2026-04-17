@@ -1,0 +1,378 @@
+openapi: 3.0.3
+info:
+  title: Library API
+  version: "1.0.0"
+  description: Mock specification for Library API (Lab 8)
+servers:
+  - url: http://localhost:4010
+tags:
+  - name: Auth
+  - name: Books
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TokenRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+    TokenRefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+    TokenResponse:
+      type: object
+      required: [access_token, refresh_token, token_type]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+    BookStatus:
+      type: string
+      enum: [available, borrowed]
+    BookCreate:
+      type: object
+      required: [title, author, description, year, status]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        author:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        year:
+          type: integer
+          minimum: 0
+        status:
+          $ref: "#/components/schemas/BookStatus"
+    BookResponse:
+      allOf:
+        - $ref: "#/components/schemas/BookCreate"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+    BookListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookResponse"
+        next_cursor:
+          type: string
+          nullable: true
+
+paths:
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Issue access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "200":
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+              example:
+                access_token: access.jwt.token
+                refresh_token: refresh.jwt.token
+                token_type: bearer
+        "401":
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid username or password
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRefreshRequest"
+      responses:
+        "200":
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+              example:
+                access_token: new.access.jwt.token
+                refresh_token: new.refresh.jwt.token
+                token_type: bearer
+        "401":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid token
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
+
+  /books/:
+    get:
+      tags: [Books]
+      summary: Get books with cursor pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/BookStatus"
+        - name: author
+          in: query
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [title, year]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Books list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookListResponse"
+              example:
+                items:
+                  - id: "2ebf8e20-5b3a-4cb2-9ae7-4de5c5925f7c"
+                    title: Clean Code
+                    author: Robert C. Martin
+                    description: A handbook of agile software craftsmanship
+                    year: 2008
+                    status: available
+                next_cursor: null
+        "400":
+          description: Invalid cursor or sort value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid sort_by value
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid token
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
+    post:
+      tags: [Books]
+      summary: Create a book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookCreate"
+      responses:
+        "201":
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookResponse"
+              example:
+                id: "2ebf8e20-5b3a-4cb2-9ae7-4de5c5925f7c"
+                title: Domain-Driven Design
+                author: Eric Evans
+                description: Tackling complexity in software
+                year: 2003
+                status: available
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Invalid token
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
+
+  /books/{book_id}:
+    get:
+      tags: [Books]
+      summary: Get book by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Book not found
+        "422":
+          description: Invalid UUID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
+    delete:
+      tags: [Books]
+      summary: Delete book by id (idempotent)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid UUID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: Too many requests
