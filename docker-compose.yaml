@@ -6,4 +6,4 @@ services:
       - "4010:4010"
     volumes:
       - ./openapi/library-api.yaml:/tmp/library-api.yaml:ro
-    command: mock -h 0.0.0.0 /tmp/library-api.yaml
+    command: ["mock", "/tmp/library-api.yaml", "-h", "0.0.0.0", "-p", "4010", "--multiprocess=false"]

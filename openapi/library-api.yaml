@@ -177,8 +177,6 @@ paths:
     get:
       tags: [Books]
       summary: Get books with cursor pagination
-      security:
-        - bearerAuth: []
       parameters:
         - name: status
           in: query
@@ -248,8 +246,6 @@ paths:
     post:
       tags: [Books]
       summary: Create a book
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -297,8 +293,6 @@ paths:
     get:
       tags: [Books]
       summary: Get book by id
-      security:
-        - bearerAuth: []
       parameters:
         - name: book_id
           in: path
@@ -344,8 +338,6 @@ paths:
     delete:
       tags: [Books]
       summary: Delete book by id (idempotent)
-      security:
-        - bearerAuth: []
       parameters:
         - name: book_id
           in: path
