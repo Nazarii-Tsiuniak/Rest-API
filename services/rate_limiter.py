@@ -18,6 +18,11 @@ RATE_LIMITS = {
     "authenticated": (10, 60),
 }
 
+
+def _rate_limit_enabled() -> bool:
+    return os.getenv("RATE_LIMIT_ENABLED", "1").lower() not in {"0", "false", "no"}
+
+
 _redis_client = from_url(
     os.getenv("REDIS_URL", "redis://redis:6379/0"),
     encoding="utf-8",
@@ -35,6 +40,9 @@ async def get_redis() -> Redis:
 
 
 async def rate_limit(request: Request, user_id: str | None, redis_client: Redis) -> None:
+    if not _rate_limit_enabled():
+        return
+
     identity = user_id or (request.client.host if request.client else "unknown")
     limit_type = "authenticated" if user_id else "anonymous"
     limit, period = RATE_LIMITS[limit_type]

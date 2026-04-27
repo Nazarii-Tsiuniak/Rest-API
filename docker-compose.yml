@@ -28,6 +28,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/library
       REDIS_URL: redis://redis:6379/0
       SEED_DATA: "1"
+      RATE_LIMIT_ENABLED: "0"
     ports:
       - "8000:8000"
 
@@ -36,6 +37,18 @@ services:
     container_name: library-redis
     ports:
       - "6379:6379"
+
+  locust:
+    image: locustio/locust:2.29.0
+    container_name: library-locust
+    depends_on:
+      - api
+    working_dir: /mnt/locust
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host=http://api:8000
+    ports:
+      - "8089:8089"
 
 volumes:
   postgres_data:

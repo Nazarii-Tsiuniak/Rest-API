@@ -1,9 +1,13 @@
 import os
+from hashlib import sha256
 from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+from repository.user_repository import UserRepository
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
@@ -11,15 +15,34 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-change-me-change-me-change-me")
 ALGORITHM = "HS256"
 
-_USERS = {
-    "admin": "admin",
-}
-
 _security = HTTPBearer()
 
 
-def authenticate_user(username: str, password: str) -> bool:
-    return _USERS.get(username) == password
+def _hash_password(password: str) -> str:
+    return sha256(password.encode("utf-8")).hexdigest()
+
+
+def authenticate_user(db: Session, username: str, password: str) -> bool:
+    user = UserRepository(db).get_by_username(username)
+    if not user:
+        return False
+    return user.password_hash == _hash_password(password)
+
+
+def register_user(db: Session, username: str, password: str) -> None:
+    repository = UserRepository(db)
+    if repository.get_by_username(username):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User already exists",
+        )
+    repository.create(username=username, password_hash=_hash_password(password))
+
+
+def ensure_default_user(db: Session) -> None:
+    repository = UserRepository(db)
+    if not repository.get_by_username("admin"):
+        repository.create(username="admin", password_hash=_hash_password("admin"))
 
 
 def _create_token(username: str, token_type: str, expires_delta: timedelta) -> str:

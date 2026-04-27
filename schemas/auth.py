@@ -6,6 +6,15 @@ class TokenRequest(BaseModel):
     password: str = Field(min_length=1)
 
 
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=4, max_length=128)
+
+
+class UserResponse(BaseModel):
+    username: str
+
+
 class TokenRefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
 

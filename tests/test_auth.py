@@ -8,6 +8,7 @@ os.environ["SEED_DATA"] = "0"
 
 from database import Base, SessionLocal, engine, get_db
 from main import app
+from services.auth_service import ensure_default_user
 from services.rate_limiter import get_redis
 
 
@@ -48,6 +49,11 @@ class FakeRedis:
 def reset_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        ensure_default_user(db)
+    finally:
+        db.close()
     yield
 
 
@@ -78,3 +84,41 @@ async def test_refresh_flow():
         data = refresh_response.json()
         assert data["access_token"]
         assert data["refresh_token"]
+
+
+@pytest.mark.asyncio
+async def test_register_then_login():
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        register_response = await ac.post("/auth/register", json={
+            "username": "reader1",
+            "password": "secret123",
+        })
+        assert register_response.status_code == 201
+        assert register_response.json()["username"] == "reader1"
+
+        login_response = await ac.post("/auth/token", json={
+            "username": "reader1",
+            "password": "secret123",
+        })
+        assert login_response.status_code == 200
+        assert login_response.json()["access_token"]
+
+
+@pytest.mark.asyncio
+async def test_register_duplicate_returns_409():
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        first = await ac.post("/auth/register", json={
+            "username": "reader2",
+            "password": "secret123",
+        })
+        second = await ac.post("/auth/register", json={
+            "username": "reader2",
+            "password": "secret123",
+        })
+
+        assert first.status_code == 201
+        assert second.status_code == 409
