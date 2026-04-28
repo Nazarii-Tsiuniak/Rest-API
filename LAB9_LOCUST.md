@@ -14,17 +14,3 @@ docker compose -f docker-compose.yml up --build
 Після старту:
 - API: `http://127.0.0.1:8000/docs`
 - Locust UI: `http://127.0.0.1:8089`
-
-## Як прогнати тест
-1. Відкрити `http://127.0.0.1:8089`
-2. Заповнити:
-- Number of users: `50`
-- Spawn rate: `5`
-- Host: `http://api:8000`
-3. Натиснути `Start swarming`
-
-## Що здати
-- Код: `locustfile.py`, `docker-compose.yml`
-- Скріншоти з Locust:
-- вкладка `Statistics`
-- вкладка `Charts` (або `Failures`, якщо є)
