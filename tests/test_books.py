@@ -66,6 +66,12 @@ def client():
 
 
 def auth_headers(client: TestClient) -> dict:
+    register_response = client.post(
+        "/auth/register",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert register_response.status_code == 201
+
     token_response = client.post(
         "/auth/token",
         json={"username": "admin", "password": "admin"},
@@ -90,6 +96,12 @@ def create_book(client: TestClient, headers: dict, **overrides) -> dict:
 
 
 def test_issue_tokens_success(client: TestClient):
+    register_response = client.post("/auth/register", json={
+        "username": "admin",
+        "password": "admin",
+    })
+    assert register_response.status_code == 201
+
     response = client.post("/auth/token", json={
         "username": "admin",
         "password": "admin",
@@ -102,6 +114,12 @@ def test_issue_tokens_success(client: TestClient):
 
 
 def test_issue_tokens_invalid_credentials_returns_401(client: TestClient):
+    register_response = client.post("/auth/register", json={
+        "username": "admin",
+        "password": "admin",
+    })
+    assert register_response.status_code == 201
+
     response = client.post("/auth/token", json={
         "username": "admin",
         "password": "wrong",
@@ -115,6 +133,12 @@ def test_issue_tokens_invalid_payload_returns_422(client: TestClient):
 
 
 def test_refresh_tokens_success(client: TestClient):
+    register_response = client.post("/auth/register", json={
+        "username": "admin",
+        "password": "admin",
+    })
+    assert register_response.status_code == 201
+
     token_response = client.post("/auth/token", json={
         "username": "admin",
         "password": "admin",

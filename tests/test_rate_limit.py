@@ -66,6 +66,12 @@ def client():
 
 
 def auth_headers(client: TestClient) -> dict:
+    register_response = client.post(
+        "/auth/register",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert register_response.status_code == 201
+
     token_response = client.post(
         "/auth/token",
         json={"username": "admin", "password": "admin"},
@@ -76,6 +82,12 @@ def auth_headers(client: TestClient) -> dict:
 
 
 def test_anonymous_under_limit_returns_200(client: TestClient):
+    register_response = client.post(
+        "/auth/register",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert register_response.status_code == 201
+
     first = client.post("/auth/token", json={"username": "admin", "password": "admin"})
     second = client.post("/auth/token", json={"username": "admin", "password": "admin"})
 
@@ -84,6 +96,12 @@ def test_anonymous_under_limit_returns_200(client: TestClient):
 
 
 def test_anonymous_reaches_limit_returns_429(client: TestClient):
+    register_response = client.post(
+        "/auth/register",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert register_response.status_code == 201
+
     client.post("/auth/token", json={"username": "admin", "password": "admin"})
     client.post("/auth/token", json={"username": "admin", "password": "admin"})
     third = client.post("/auth/token", json={"username": "admin", "password": "admin"})

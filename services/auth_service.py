@@ -1,9 +1,13 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from database import SessionLocal
+from repository.user_repository import create_user, get_user_by_username
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
@@ -11,15 +15,38 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-change-me-change-me-change-me")
 ALGORITHM = "HS256"
 
-_USERS = {
-    "admin": "admin",
-}
-
 _security = HTTPBearer()
 
 
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    return bcrypt.checkpw(password.encode(), password_hash.encode())
+
+
+def register_user(username: str, password: str) -> bool:
+    db = SessionLocal()
+    try:
+        if get_user_by_username(db, username):
+            return False
+        password_hash = _hash_password(password)
+        create_user(db, username, password_hash)
+        return True
+    finally:
+        db.close()
+
+
 def authenticate_user(username: str, password: str) -> bool:
-    return _USERS.get(username) == password
+    db = SessionLocal()
+    try:
+        user = get_user_by_username(db, username)
+        if not user:
+            return False
+        return _verify_password(password, user.password_hash)
+    finally:
+        db.close()
 
 
 def _create_token(username: str, token_type: str, expires_delta: timedelta) -> str:
