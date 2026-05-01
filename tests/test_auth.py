@@ -64,12 +64,6 @@ async def test_refresh_flow():
     transport = ASGITransport(app=app)
 
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        register_response = await ac.post("/auth/register", json={
-            "username": "admin",
-            "password": "admin",
-        })
-        assert register_response.status_code == 201
-
         token_response = await ac.post("/auth/token", json={
             "username": "admin",
             "password": "admin",

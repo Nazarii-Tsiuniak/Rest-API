@@ -7,4 +7,3 @@ sqlalchemy
 psycopg2-binary
 PyJWT
 redis
-bcrypt

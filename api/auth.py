@@ -1,35 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from schemas.auth import (
-    RegisterRequest,
-    RegisterResponse,
-    TokenRefreshRequest,
-    TokenRequest,
-    TokenResponse,
-)
+from schemas.auth import TokenRefreshRequest, TokenRequest, TokenResponse
 from services.auth_service import (
     authenticate_user,
     create_access_token,
     create_refresh_token,
-    register_user,
     verify_token,
 )
 from services.rate_limiter import rate_limit_anonymous
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-
-@router.post("/register", response_model=RegisterResponse, status_code=201)
-def register(payload: RegisterRequest):
-    if not register_user(payload.username, payload.password):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username already exists",
-        )
-    return RegisterResponse(
-        username=payload.username,
-        message="User registered successfully",
-    )
 
 
 @router.post(
