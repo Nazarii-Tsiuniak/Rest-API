@@ -4,10 +4,21 @@ from uuid import NAMESPACE_DNS, uuid5
 from sqlalchemy.orm import Session
 
 from models.book import Book
+from repository.user_repository import create_user, get_user_by_username
+from services.auth_service import _hash_password
 
 
 def _seed_enabled() -> bool:
     return os.getenv("SEED_DATA", "1").lower() not in {"0", "false", "no"}
+
+
+def seed_users_if_empty(db: Session) -> None:
+    if not _seed_enabled():
+        return
+
+    if not get_user_by_username(db, "admin"):
+        password_hash = _hash_password("admin")
+        create_user(db, "admin", password_hash)
 
 
 def seed_books_if_empty(db: Session) -> None:
